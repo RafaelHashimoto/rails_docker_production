@@ -1,13 +1,45 @@
 version: '3'
-services: 
-  db-production:
+services:
+  apollo-db:
     image: postgres
+    environment:
+      POSTGRES_USER: apollo_admin
+      POSTGRES_PASSWORD: ${POSTGRES_DB}
     volumes:
-      - ./tmp/db:/var/lib/postgresql/data
+      - ./db:/var/lib/postgresql/data
+  apollo-staging:
+    build: ./staging
+    depends_on:
+      - apollo-db
+    environment:
+      RAILS_ENV: staging
+      POSTGRES_DB: ${POSTGRES_DB}
+      RAILS_SERVE_STATIC_FILES: 'true'
+      RAILS_LOG_TO_STDOUT: 'true'
+    volumes:
+      - ./staging/apollo:/var/www/apollo
+      - .initialize.sh/:/var/www/apollo/initialize.sh
+    ports:
+      - "8000:8000"
+      - '2525:587'
+    entrypoint: /bin/sh
+    stdin_open: true
+    tty: true
   apollo-production:
-    build: .
-      #command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
-      volumes:
-        - .:/var/www/apollo
-      depends_on:
-        - db
+    build: ./production
+    volumes:
+      - ./production/apollo:/var/www/apollo
+      - ./initialize.sh:/var/www/apollo/initialize.sh
+    depends_on:
+      - apollo-db
+    ports:
+      - "8080:8080"
+      - '587:587'
+    environment:
+      RAILS_ENV: production
+      POSTGRES_DB: ${POSTGRES_DB}
+      RAILS_SERVE_STATIC_FILES: 'true'
+      RAILS_LOG_TO_STDOUT: 'true'
+    entrypoint: /bin/sh
+    stdin_open: true
+    tty: true
